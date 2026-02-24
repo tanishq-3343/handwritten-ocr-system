@@ -1,0 +1,71 @@
+"""
+metrics.py
+----------
+Evaluation metrics for OCR output:
+  - CER  (Character Error Rate)
+  - WER  (Word Error Rate)
+  - Character Accuracy
+  - Word Accuracy
+  - Exact Match
+"""
+
+import editdistance
+
+
+def compute_cer(reference: str, hypothesis: str) -> float:
+    """
+    Character Error Rate = edit_distance(ref, hyp) / len(ref).
+
+    Spaces are stripped before comparison.
+    Clamped to [0.0, 1.0].
+    """
+    ref = reference.replace(" ", "")
+    hyp = hypothesis.replace(" ", "")
+    if not ref:
+        return 0.0 if not hyp else 1.0
+    return min(editdistance.eval(ref, hyp) / len(ref), 1.0)
+
+
+def compute_wer(reference: str, hypothesis: str) -> float:
+    """
+    Word Error Rate = edit_distance(ref_words, hyp_words) / len(ref_words).
+
+    Clamped to [0.0, 1.0].
+    """
+    ref_words = reference.split()
+    hyp_words = hypothesis.split()
+    if not ref_words:
+        return 0.0 if not hyp_words else 1.0
+    return min(editdistance.eval(ref_words, hyp_words) / len(ref_words), 1.0)
+
+
+def compute_char_accuracy(reference: str, hypothesis: str) -> float:
+    """Character-level accuracy = 1 − CER, clamped to [0.0, 1.0]."""
+    return max(0.0, 1.0 - compute_cer(reference, hypothesis))
+
+
+def compute_word_accuracy(reference: str, hypothesis: str) -> float:
+    """Word-level accuracy = 1 − WER, clamped to [0.0, 1.0]."""
+    return max(0.0, 1.0 - compute_wer(reference, hypothesis))
+
+
+def compute_exact_match(reference: str, hypothesis: str) -> int:
+    """Binary exact match after lowercasing and stripping both strings."""
+    return int(reference.strip().lower() == hypothesis.strip().lower())
+
+
+def evaluate_sample(ground_truth: str, prediction: str) -> dict:
+    """
+    Compute all metrics for a single (ground_truth, prediction) pair.
+
+    Returns
+    -------
+    dict with keys: cer, wer, char_accuracy, word_accuracy, exact_match.
+    """
+    return {
+        "cer":            compute_cer(ground_truth, prediction),
+        "wer":            compute_wer(ground_truth, prediction),
+        "char_accuracy":  compute_char_accuracy(ground_truth, prediction),
+        "word_accuracy":  compute_word_accuracy(ground_truth, prediction),
+        "exact_match":    compute_exact_match(ground_truth, prediction),
+    }
